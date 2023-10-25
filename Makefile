@@ -9,5 +9,5 @@ format:
 clean:
 	rm -rf *~ javadoc-extractor-gcc
 
-
-
+diff: clean
+	git difftool HEAD
