@@ -37,6 +37,45 @@ char *source_file_to_output_file_name(char *input_filename) {
   return result;
 }
 
+struct buffer_range_S {
+  uint64_t start;
+  uint64_t end;
+};
+
+typedef struct buffer_range_S buffer_range_t;
+
+/**
+ * @function next_comment
+ *
+ * Return the next comment (as a buffer_range_t) in the buffer. This
+ * must always occurs at or after the end of the passed in range
+ * (i.e., the previous comment).
+ */
+buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
+  for (int position = range.end; (position < buffer->length - 2); position++) {
+    if (buffer_get(buffer, position) == '/' &&
+        buffer_get(buffer, position + 1) == '*' &&
+        buffer_get(buffer, position + 2) == '*') {
+      int start_position = position;
+      int end_position = start_position;
+      position += 3;
+      while (position < buffer->length - 1) {
+        if (buffer_get(buffer, position) == '*' &&
+            buffer_get(buffer, position + 1) == '/') {
+          end_position = position + 2;
+          return (buffer_range_t){.start = start_position, .end = end_position};
+        } else {
+          position++;
+        }
+      }
+      log_fatal(
+          "The javadoc commented at position %s is not properly terminated.");
+      fatal_error(ERROR_UKNOWN);
+    }
+  }
+  return (buffer_range_t){.start = 0, .end = 0};
+}
+
 /**
  * Read filename into memory and scan for all of the documentation
  * comments. Extract each comment, remove the C style comment stuff,
@@ -65,44 +104,20 @@ extract_documentation_comments(string_hashtable_t *output_files,
   buffer_t *source_file = make_buffer(1);
   source_file = buffer_append_file_contents(source_file, filename);
 
-  int position = 0;
-  while (position < source_file->length - 2) {
-    if (buffer_get(source_file, position) == '/' &&
-        buffer_get(source_file, position + 1) == '*' &&
-        buffer_get(source_file, position + 2) == '*') {
-      int start_position = position;
-      int end_position = start_position;
-      position += 3;
-      while (position < source_file->length - 1) {
-        if (buffer_get(source_file, position) == '*' &&
-            buffer_get(source_file, position + 1) == '/') {
-          end_position = position;
-          position += 2;
-          break;
-        } else {
-          position++;
-        }
-      }
-
-      if (start_position == end_position) {
-        log_fatal(
-            "The javadoc commented at position %s is not properly terminated.");
-        fatal_error(ERROR_UKNOWN);
-      }
-
-      log_info("javadoc comment found at %d,%d\n", start_position,
-               end_position);
-
-      char *the_entire_comment =
-          buffer_c_substring(source_file, start_position, end_position);
-      // Eventually we could use something smaller for the key but for
-      // now we just sort on the entire comment itself.
-      output_file->fragments =
-          string_tree_insert(output_file->fragments, the_entire_comment,
-                             str_to_value(the_entire_comment));
-    } else {
-      position++;
+  buffer_range_t comment_range = (buffer_range_t){.start = 0, .end = 0};
+  while (1) {
+    comment_range = next_comment(source_file, comment_range);
+    if (comment_range.start == comment_range.end) {
+      break;
     }
+    log_info("javadoc comment found at [%d,%d)\n", comment_range.start,
+             comment_range.end);
+    char *comment =
+        buffer_c_substring(source_file, comment_range.start, comment_range.end);
+    // Eventually we could use something smaller for the key but for
+    // now we just sort on the entire comment itself.
+    output_file->fragments = string_tree_insert(output_file->fragments, comment,
+                                                str_to_value(comment));
   }
 
   log_info("Done reading %s\n", filename);
