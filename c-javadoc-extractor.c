@@ -32,7 +32,7 @@ output_file_t *make_output_file(char *output_file_name) {
 char *source_file_to_output_file_name(char *input_filename) {
   char *substr = string_substring(input_filename, 0,
                                   string_index_of_char(input_filename, '.'));
-  char *result = string_append(substr, "md");
+  char *result = string_append(substr, ".md");
   free_bytes(substr);
   return result;
 }
