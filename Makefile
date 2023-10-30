@@ -1,13 +1,13 @@
 all: build
 
 build:
-	gcc -o javadoc-extractor-gcc *.c
+	gcc -g -rdynamic -o javadoc-extractor-gcc *.c
 
 format:
 	clang-format -i *.c
 
 clean:
-	rm -rf *~ javadoc-extractor-gcc
+	rm -rf *~ javadoc-extractor-gcc src-doc/
 
 diff: clean
 	git difftool HEAD

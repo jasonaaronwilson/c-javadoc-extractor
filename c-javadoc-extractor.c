@@ -1,9 +1,18 @@
+/**
+ * @file c-javadoc-extractor
 
-///
-/// Make an array of uint64 and add 16 elements to it.
-///
+ * This tool extracts documentation comments (assumed to be formatted
+ * as markdown) and produces markdown files that mirror the structure
+ * of your source code into a directory of your choice (we suggest
+ * src-doc).
+ *
+ * Although we rely on "c-armyknife-lib" which is about 4K lines of
+ * code including verbose documentation, this program is tiny by
+ * modern standards and extremely fast.
+ */
 
 #include <stdlib.h>
+#include <sys/types.h>
 
 #define LOGGER_DEFAULT_LEVEL LOGGER_INFO
 #define C_ARMYKNIFE_LIB_IMPL
@@ -76,6 +85,26 @@ buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
   return (buffer_range_t){.start = 0, .end = 0};
 }
 
+char *comment_to_markdown(char *comment) {
+  uint64_t length = strlen(comment);
+  log_info("comment length = %d\n", length);
+  comment = string_substring(comment, 3, length - 2);
+  value_array_t *lines = tokenize(comment, "\n");
+  buffer_t *buffer = make_buffer(length);
+  for (int i = 0; i < lines->length; i++) {
+    char *line = value_array_get(lines, i).str;
+    if (string_starts_with(line, " * ")) {
+      line += 3;
+    } else if (string_starts_with(line, " *")) {
+      line += 2;
+    }
+    buffer = buffer_append_string(buffer, line);
+    buffer = buffer_append_byte(buffer, '\n');
+  }
+  // TODO(jawilson): add some free_bytes
+  return buffer_to_c_string(buffer);
+}
+
 /**
  * Read filename into memory and scan for all of the documentation
  * comments. Extract each comment, remove the C style comment stuff,
@@ -116,8 +145,9 @@ extract_documentation_comments(string_hashtable_t *output_files,
         buffer_c_substring(source_file, comment_range.start, comment_range.end);
     // Eventually we could use something smaller for the key but for
     // now we just sort on the entire comment itself.
-    output_file->fragments = string_tree_insert(output_file->fragments, comment,
-                                                str_to_value(comment));
+    output_file->fragments =
+        string_tree_insert(output_file->fragments, comment,
+                           str_to_value(comment_to_markdown(comment)));
   }
 
   log_info("Done reading %s\n", filename);
@@ -125,20 +155,46 @@ extract_documentation_comments(string_hashtable_t *output_files,
   return output_files;
 }
 
-void output_markdown_files(string_hashtable_t *output_files) {
-  fprintf(stderr, "HERE HERE HERE\n");
-  log_info("Starting output of markdown files:");
+void output_markdown_files(string_hashtable_t *output_files,
+                           char *output_directory) {
+  log_info("*** Starting output of markdown files ***");
+
+  log_info("Making sure the output directory %s exists...", output_directory);
+  {
+    struct stat st;
+    const char *directory_path = output_directory;
+    if (stat(directory_path, &st) != 0) {
+      // The directory does not exist, so create it.
+      mkdir(directory_path, 0755);
+    }
+  }
+
+  // While additional sorting may make sense, let's see how bad this
+  // looks first.
 
   // clang-format off
   string_ht_foreach(output_files, output_filename, output_file_value, {
       log_info("Another output file... %s", output_filename);
       output_file_t* output_file = output_file_value.ptr;
+      buffer_t* output_buffer = make_buffer(1024);
       string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
           char* fragment_text = fragment_value.ptr;
-          fprintf(stderr, "Fragment (file=%s) = %s\n\n", output_filename, fragment_text);
+          fprintf(stderr, "-----Fragment (file=%s)-----\n%s-----(end fragment)-----\n\n", 
+                  output_filename, 
+                  fragment_text);
+          if (string_starts_with(fragment_text, "@file")) {
+            output_buffer = buffer_append_string(output_buffer, "# ");
+          } else {
+            output_buffer = buffer_append_string(output_buffer, "## ");
+          }
+          output_buffer = buffer_append_string(output_buffer, fragment_text);
         });
+      // This is where we create and write an output file now that it
+      // is complete.
+      buffer_write_file(output_buffer, string_append(output_directory, output_filename));
     });
   // clang-format on
+
   log_info("Done outputting markdown files.");
 }
 
@@ -172,13 +228,15 @@ int main(int argc, char **argv) {
   command_line_parse_result_t args_and_files =
       parse_command_line(argc, argv, get_command_line_parser_config());
 
-  string_hashtable_t *output = make_string_hashtable(16);
+  string_hashtable_t *files = make_string_hashtable(16);
   for (int i = 0; i < args_and_files.files->length; i++) {
     char *filename = value_array_get(args_and_files.files, i).str;
-    output = extract_documentation_comments(output, filename);
+    files = extract_documentation_comments(files, filename);
   }
 
-  output_markdown_files(output);
+  // TODO(jawilson): hashtable find_or_default or something instead of
+  // forcing "src-doc".
+  output_markdown_files(files, "src-doc/");
 
   exit(0);
 }
