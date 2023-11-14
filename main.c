@@ -1,14 +1,7 @@
 /**
- * @file c-javadoc-extractor
-
- * This tool extracts documentation comments (assumed to be formatted
- * as markdown) and produces markdown files that mirror the structure
- * of your source code into a directory of your choice (we suggest
- * src-doc).
+ * @file main.c
  *
- * Although we rely on "c-armyknife-lib" which is about 4K lines of
- * code including verbose documentation, this program is tiny by
- * modern standards and extremely fast.
+ * Extract and *organize* "documentation comments".
  */
 
 #include <stdlib.h>
