@@ -13,7 +13,7 @@ tool in turn *completely* ignores the code.
 
 ## Wait, what? Why?
 
-Yes, we *completely* ignore the code. The ridicuously simple idea is
+Yes, we *completely* ignore the code. The ridiculously simple idea is
 that a developer simply wants their code and documentation in the same
 place to simplify the task of keeping them in sync and while some
 inconsistencies can be caught by parsing both the documentation and
@@ -24,7 +24,7 @@ for documentation extraction.
 ## Tags
 
 We allows certain "tags" in the markdown though the have very little
-semantic power (they mostly help us sort your documention nicely).
+semantic power (they mostly help us sort your document ion nicely).
 
 "@file", "@function", "@type", "@global", "@constants", "@macro",
 "@enum", etc. are all language agnostic tags that can be used to help
@@ -49,24 +49,18 @@ When a tag is used but not understood, it will get it's own section
 after the standard ones (and will not be an error unless a likely
 future command line option makes it an error).
 
-The name after the tag should be whitespace delimited, it need not be
+The name after the tag should be white-space delimited, it need not be
 a legal identifier in any particular language so filenames without
-spaces are quite alright while filenames with whitespace in them could
+spaces are quite alright while filenames with white-space in them could
 be problematic and I'm not really worried about that yet.
 
 ## Ordering
 
 Ordering is based on tags and then what appears after tags (using
 simple ASCII based alphabetization for the early versions). While we
-are not doing anything clever to unserstand UTF-8, that is the
+are not doing anything clever to understand UTF-8, that is the
 expected format of all source files and more importantly the
 documentation comments.
-
-## WARNING
-
-This is how the tool *will* work. We've written enough code to extract
-and semi-process documentation comments and that seems solid so output
-will be happending shortly.
 
 ## "Unix" Usage
 
@@ -90,6 +84,8 @@ delighted. [^2]
 ## Usage Windows
 
 TBD.
+
+I'm seriously considering using Co
 
 ## Output Structure/Format
 

@@ -11,3 +11,5 @@ clean:
 
 diff: clean
 	git difftool HEAD
+
+cfd: clean format diff
