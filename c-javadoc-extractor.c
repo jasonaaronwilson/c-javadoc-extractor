@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+#define BUFFER_PRINTF_INITIAL_BUFFER_SIZE 32
 #define LOGGER_DEFAULT_LEVEL LOGGER_INFO
 #define C_ARMYKNIFE_LIB_IMPL
 #include "../c-armyknife-lib/c-armyknife-lib.h"
@@ -155,6 +156,28 @@ extract_documentation_comments(string_hashtable_t *output_files,
   return output_files;
 }
 
+// Output an "index" markdown file to tie everything together
+
+void output_readme_markdown_file(string_hashtable_t *output_files,
+                                 char *output_directory) {
+
+  // We now desire output_files to be sorted but we can don't have to
+  // implment that just yet.
+
+  buffer_t *output_buffer = make_buffer(1024);
+
+  output_buffer =
+      buffer_append_string(output_buffer, "# Source Documentation Index\n\n");
+
+  string_ht_foreach(output_files, output_file_name, fragment_value, {
+    output_buffer = buffer_printf(output_buffer, "* [%s](%s)\n",
+                                  output_file_name, output_file_name);
+    output_buffer = buffer_append_string(output_buffer, "\n");
+  });
+  buffer_write_file(output_buffer,
+                    string_append(output_directory, "README.md"));
+}
+
 void output_markdown_files(string_hashtable_t *output_files,
                            char *output_directory) {
   log_info("*** Starting output of markdown files ***");
@@ -194,6 +217,8 @@ void output_markdown_files(string_hashtable_t *output_files,
       buffer_write_file(output_buffer, string_append(output_directory, output_filename));
     });
   // clang-format on
+
+  output_readme_markdown_file(output_files, output_directory);
 
   log_info("Done outputting markdown files.");
 }
