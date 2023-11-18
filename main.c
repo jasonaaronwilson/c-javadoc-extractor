@@ -12,6 +12,16 @@
 #define C_ARMYKNIFE_LIB_IMPL
 #include "../c-armyknife-lib/c-armyknife-lib.h"
 
+/**
+ * @structure output_file_t
+ *
+ * Represents an output markdown file we are creating. We keep track
+ * of all the input files which map to the same makrdown file (for
+ * example a ".c" and a ".h" can both contribute to the output
+ * markdown file). More importantly we keep track of all of the
+ * comments which match the documentation comment syntax which we call
+ * "fragments".
+ */
 struct output_file_S {
   char *output_file_name;
   value_array_t *input_file_names;
@@ -20,6 +30,12 @@ struct output_file_S {
 
 typedef struct output_file_S output_file_t;
 
+/**
+ * @function make_output_file
+ *
+ * Allocate an output_file_t and fill in the reasonable initial
+ * values.
+ */
 output_file_t *make_output_file(char *output_file_name) {
   output_file_t *result = malloc_struct(output_file_t);
   result->output_file_name = output_file_name;
@@ -45,14 +61,24 @@ struct buffer_range_S {
   uint64_t end;
 };
 
+/**
+ * @structure buffer_range_t
+ *
+ * Holds a simple pair of a start and an end index which describes the
+ * entire comment. Since the comment will likely have internal
+ * characters that must be removed anyways to create markdown, there's
+ * no real advantage to trying to strip off any leading and trailing
+ * parts of the comment at this point and it makes the code a bit
+ * cleaner not to do so.
+ */
 typedef struct buffer_range_S buffer_range_t;
 
 /**
  * @function next_comment
  *
  * Return the next comment (as a buffer_range_t) in the buffer. This
- * must always occurs at or after the end of the passed in range
- * (i.e., the previous comment).
+ * must occur at or after the end of the passed in range (i.e., the
+ * previous comment).
  */
 buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
   for (int position = range.end; (position < buffer->length - 2); position++) {
@@ -79,6 +105,15 @@ buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
   return (buffer_range_t){.start = 0, .end = 0};
 }
 
+/**
+ * @function comment_to_markdown
+ *
+ * Convert a C style documentation comment to it's plain markdown
+ * equivalent.
+ *
+ * (Currently we don't strip off or convert the tag which can probably
+ * make all of the documentation look much better.)
+ */
 char *comment_to_markdown(char *comment) {
   uint64_t length = strlen(comment);
   log_info("comment length = %d\n", length);
@@ -100,9 +135,13 @@ char *comment_to_markdown(char *comment) {
 }
 
 /**
+ * @function extract_documentation_comments
+ *
  * Read filename into memory and scan for all of the documentation
- * comments. Extract each comment, remove the C style comment stuff,
- * and then add each comment to the output file.
+ * comments. Extract each comment as a C string and add as a fragment
+ * to an existing "output file". (If we changed buffer_range_t to
+ * include the buffer, we could make the code possibly more efficient
+ * but that might it more confusing).
  */
 string_hashtable_t *
 extract_documentation_comments(string_hashtable_t *output_files,
@@ -149,8 +188,11 @@ extract_documentation_comments(string_hashtable_t *output_files,
   return output_files;
 }
 
-// Output an "index" markdown file to tie everything together
-
+/**
+ * @function output_readme_markdown_file
+ *
+ * Output an "index" markdown file to tie everything together.
+ */
 void output_readme_markdown_file(string_hashtable_t *output_files,
                                  char *output_directory) {
 
@@ -171,6 +213,13 @@ void output_readme_markdown_file(string_hashtable_t *output_files,
                     string_append(output_directory, "README.md"));
 }
 
+/**
+ * @function output_markdown_files
+ *
+ * Output all of the markdown files that we know about (except the
+ * "index.md" or "README.md" which is generated afterwards if
+ * requested).
+ */
 void output_markdown_files(string_hashtable_t *output_files,
                            char *output_directory) {
   log_info("*** Starting output of markdown files ***");
@@ -211,9 +260,7 @@ void output_markdown_files(string_hashtable_t *output_files,
     });
   // clang-format on
 
-  output_readme_markdown_file(output_files, output_directory);
-
-  log_info("Done outputting markdown files.");
+  log_info("Done outputting all markdown files except the index.");
 }
 
 /* ====================================================================== */
@@ -231,7 +278,7 @@ value_array_t *get_command_line_flag_descriptors() {
 command_line_parser_configuation_t *get_command_line_parser_config() {
   command_line_parser_configuation_t *config =
       malloc_struct(command_line_parser_configuation_t);
-  config->program_name = "c-javadoc-extractor";
+  config->program_name = "c-markdown-extractor";
   config->program_description =
       "A simple program to extract markdown in javadoc style comments\n"
       "and create *markdown* files from it.";
@@ -255,6 +302,10 @@ int main(int argc, char **argv) {
   // TODO(jawilson): hashtable find_or_default or something instead of
   // forcing "src-doc".
   output_markdown_files(files, "src-doc/");
+
+  // TODO(jawilson): only do this if an index is requested and also
+  // pass in the filename!
+  output_readme_markdown_file(files, "src-doc/");
 
   exit(0);
 }

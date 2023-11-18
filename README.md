@@ -26,9 +26,10 @@ for documentation extraction.
 We allows certain "tags" in the markdown though the have very little
 semantic power (they mostly help us sort your document ion nicely).
 
-"@file", "@function", "@type", "@global", "@constants", "@macro",
-"@enum", etc. are all language agnostic tags that can be used to help
-the documentation extractor present the documentation a bit better.
+"@file", "@function", "@type", "@global", "@constant", "@macro",
+"@enumumeration", "@structure", etc. are all language agnostic tags
+that can be used to help the documentation extractor present the
+documentation a bit better (mainly by combining by tag and sorting.
 
 Currently all tags appears immediately after the start of a
 documentation comment so for C that might look like this:
