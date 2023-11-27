@@ -7,13 +7,27 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#define BUFFER_PRINTF_INITIAL_BUFFER_SIZE 32
 #define LOGGER_DEFAULT_LEVEL LOGGER_INFO
 #define C_ARMYKNIFE_LIB_IMPL
 #include "../c-armyknife-lib/c-armyknife-lib.h"
 
-char *tag_sort_order[] = {"@file",      "@typedef", "@struct",
-                          "@constants", "@macro",   "@function"};
+char *tag_sort_order[] = {"@file",  "@typedef",  "@struct", "@constants",
+                          "@macro", "@function", NULL};
+
+// Return true if the fragment_text matches one of the entries in
+// tag_sort_order.
+boolean_t fragment_starts_with_sorted_tag(char *fragment_text) {
+  for (int i = 0; true; i++) {
+    char *sorted_tag = tag_sort_order[i];
+    if (sorted_tag == NULL) {
+      return false;
+    }
+    if (string_starts_with(fragment_text, sorted_tag)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * @structure output_file_t
@@ -216,6 +230,39 @@ void output_readme_markdown_file(string_hashtable_t *output_files,
                     string_append(output_directory, "README.md"));
 }
 
+boolean_t should_process_fragment(char *tag_name, char *fragment_text) {
+  if (tag_name == NULL) {
+    return !fragment_starts_with_sorted_tag(fragment_text);
+  }
+
+  if (string_starts_with(fragment_text, tag_name)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * @function output_markdown_file_fragment
+ *
+ * Put matching markdown fragments into `output_buffer.`
+ */
+buffer_t *output_markdown_file_fragment(buffer_t *output_buffer,
+                                        char *fragment_text, char *tag_name) {
+  if (should_process_fragment(tag_name, fragment_text)) {
+    log_info("Processing fragment with text %s\n", fragment_text);
+    if (string_starts_with(fragment_text, "@file")) {
+      output_buffer = buffer_append_string(output_buffer, "# ");
+    } else {
+      output_buffer = buffer_append_string(output_buffer, "## ");
+    }
+    output_buffer = buffer_append_string(output_buffer, fragment_text);
+  } else {
+    log_info("NOT Processing fragment with text %s\n", fragment_text);
+  }
+  return output_buffer;
+}
+
 /**
  * @function output_markdown_file
  *
@@ -226,18 +273,26 @@ void output_markdown_file(char *output_directory, char *output_filename,
   log_info("Another output file... %s\n", output_filename);
   output_file_t *output_file = output_file_value.ptr;
   buffer_t *output_buffer = make_buffer(1024);
+
+  for (int i = 0; true; i++) {
+    char *tag_name = tag_sort_order[i];
+    if (tag_name == NULL) {
+      break;
+    }
+
+    string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
+      char *fragment_text = fragment_value.ptr;
+      output_buffer =
+          output_markdown_file_fragment(output_buffer, fragment_text, tag_name);
+    });
+  }
+
   string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
     char *fragment_text = fragment_value.ptr;
-    fprintf(stderr,
-            "-----Fragment (file=%s)-----\n%s-----(end fragment)-----\n\n",
-            output_filename, fragment_text);
-    if (string_starts_with(fragment_text, "@file")) {
-      output_buffer = buffer_append_string(output_buffer, "# ");
-    } else {
-      output_buffer = buffer_append_string(output_buffer, "## ");
-    }
-    output_buffer = buffer_append_string(output_buffer, fragment_text);
+    output_buffer =
+        output_markdown_file_fragment(output_buffer, fragment_text, NULL);
   });
+
   // This is where we create and write an output file now that it
   // is complete.
   buffer_write_file(output_buffer,
@@ -264,9 +319,6 @@ void output_markdown_files(string_hashtable_t *output_files,
       mkdir(directory_path, 0755);
     }
   }
-
-  // While additional sorting may make sense, let's see how bad this
-  // looks first.
 
   // clang-format off
   string_ht_foreach(output_files, output_filename, output_file_value, {
