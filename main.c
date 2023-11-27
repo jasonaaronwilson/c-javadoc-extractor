@@ -118,7 +118,7 @@ char *comment_to_markdown(char *comment) {
   uint64_t length = strlen(comment);
   log_info("comment length = %d\n", length);
   comment = string_substring(comment, 3, length - 2);
-  value_array_t *lines = tokenize(comment, "\n");
+  value_array_t *lines = string_tokenize(comment, "\n");
   buffer_t *buffer = make_buffer(length);
   for (int i = 0; i < lines->length; i++) {
     char *line = value_array_get(lines, i).str;
