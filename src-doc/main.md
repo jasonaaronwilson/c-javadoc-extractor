@@ -1,6 +1,6 @@
 # @file main.c
 
-Extract and *organize* "documentation comments".
+Extract and organize "documentation comments".
  
 ## @function comment_to_markdown
 
@@ -28,6 +28,10 @@ values.
 Return the next comment (as a buffer_range_t) in the buffer. This
 must occur at or after the end of the passed in range (i.e., the
 previous comment).
+ 
+## @function output_markdown_file
+
+Output a single makrdown file.
  
 ## @function output_markdown_files
 

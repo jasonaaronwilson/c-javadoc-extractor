@@ -1,7 +1,7 @@
 /**
  * @file main.c
  *
- * Extract and *organize* "documentation comments".
+ * Extract and organize "documentation comments".
  */
 
 #include <stdlib.h>
@@ -11,6 +11,9 @@
 #define LOGGER_DEFAULT_LEVEL LOGGER_INFO
 #define C_ARMYKNIFE_LIB_IMPL
 #include "../c-armyknife-lib/c-armyknife-lib.h"
+
+char *tag_sort_order[] = {"@file",      "@typedef", "@struct",
+                          "@constants", "@macro",   "@function"};
 
 /**
  * @structure output_file_t
@@ -214,6 +217,34 @@ void output_readme_markdown_file(string_hashtable_t *output_files,
 }
 
 /**
+ * @function output_markdown_file
+ *
+ * Output a single makrdown file.
+ */
+void output_markdown_file(char *output_directory, char *output_filename,
+                          value_t output_file_value) {
+  log_info("Another output file... %s\n", output_filename);
+  output_file_t *output_file = output_file_value.ptr;
+  buffer_t *output_buffer = make_buffer(1024);
+  string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
+    char *fragment_text = fragment_value.ptr;
+    fprintf(stderr,
+            "-----Fragment (file=%s)-----\n%s-----(end fragment)-----\n\n",
+            output_filename, fragment_text);
+    if (string_starts_with(fragment_text, "@file")) {
+      output_buffer = buffer_append_string(output_buffer, "# ");
+    } else {
+      output_buffer = buffer_append_string(output_buffer, "## ");
+    }
+    output_buffer = buffer_append_string(output_buffer, fragment_text);
+  });
+  // This is where we create and write an output file now that it
+  // is complete.
+  buffer_write_file(output_buffer,
+                    string_append(output_directory, output_filename));
+}
+
+/**
  * @function output_markdown_files
  *
  * Output all of the markdown files that we know about (except the
@@ -239,24 +270,7 @@ void output_markdown_files(string_hashtable_t *output_files,
 
   // clang-format off
   string_ht_foreach(output_files, output_filename, output_file_value, {
-      log_info("Another output file... %s", output_filename);
-      output_file_t* output_file = output_file_value.ptr;
-      buffer_t* output_buffer = make_buffer(1024);
-      string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
-          char* fragment_text = fragment_value.ptr;
-          fprintf(stderr, "-----Fragment (file=%s)-----\n%s-----(end fragment)-----\n\n", 
-                  output_filename, 
-                  fragment_text);
-          if (string_starts_with(fragment_text, "@file")) {
-            output_buffer = buffer_append_string(output_buffer, "# ");
-          } else {
-            output_buffer = buffer_append_string(output_buffer, "## ");
-          }
-          output_buffer = buffer_append_string(output_buffer, fragment_text);
-        });
-      // This is where we create and write an output file now that it
-      // is complete.
-      buffer_write_file(output_buffer, string_append(output_directory, output_filename));
+      output_markdown_file(output_directory, output_filename, output_file_value);
     });
   // clang-format on
 
