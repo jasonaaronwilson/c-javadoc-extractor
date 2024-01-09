@@ -354,24 +354,40 @@ command_line_parser_configuation_t *get_command_line_parser_config() {
 }
 
 int main(int argc, char **argv) {
+  configure_fatal_errors((fatal_error_config_t){
+      .catch_sigsegv = true,
+  });
   logger_init();
 
-  command_line_parse_result_t args_and_files =
-      parse_command_line(argc, argv, get_command_line_parser_config());
+  value_array_t *FLAG_files = NULL;
+  char *FLAG_output_dir = "src-doc/";
+
+  flag_program_name(argv[0]);
+  flag_description("Extract the markdown in javadoc style comments "
+                   "and creates markdown files.");
+
+  flag_string("--output-dir", &FLAG_output_dir);
+  flag_description("where to place the generated files");
+
+  flag_file_args(&FLAG_files);
+
+  char *error = flag_parse_command_line(argc, argv);
+  if (error) {
+    flag_print_help(stderr, error);
+    exit(1);
+  }
 
   string_hashtable_t *files = make_string_hashtable(16);
-  for (int i = 0; i < args_and_files.files->length; i++) {
-    char *filename = value_array_get(args_and_files.files, i).str;
+  for (int i = 0; i < FLAG_files->length; i++) {
+    char *filename = value_array_get(FLAG_files, i).str;
     files = extract_documentation_comments(files, filename);
   }
 
-  // TODO(jawilson): hashtable find_or_default or something instead of
-  // forcing "src-doc".
-  output_markdown_files(files, "src-doc/");
+  output_markdown_files(files, FLAG_output_dir);
 
   // TODO(jawilson): only do this if an index is requested and also
   // pass in the filename!
-  output_readme_markdown_file(files, "src-doc/");
+  output_readme_markdown_file(files, FLAG_output_dir);
 
   exit(0);
 }
