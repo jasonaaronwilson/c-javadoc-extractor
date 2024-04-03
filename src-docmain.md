@@ -65,3 +65,12 @@ requested).
 
 Output an "index" markdown file to tie everything together.
  
+## \function main
+
+The main routine for the simple markdown extractor for Javadoc (and
+eventually Doxygen) style documentation comments.
+
+This function intentionally uses the alternate Doxygen format which
+we hopefully can support so that users can kick the tires without
+migrating to the "@" syntax, etc.
+ 

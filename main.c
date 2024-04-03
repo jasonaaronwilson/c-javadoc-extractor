@@ -22,7 +22,8 @@ boolean_t fragment_starts_with_sorted_tag(char *fragment_text) {
     if (sorted_tag == NULL) {
       return false;
     }
-    if (string_starts_with(fragment_text, sorted_tag)) {
+    if (string_starts_with(fragment_text, sorted_tag) ||
+        string_starts_with(fragment_text, sorted_tag)) {
       return true;
     }
   }
@@ -101,7 +102,8 @@ buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
   for (int position = range.end; (position < buffer->length - 2); position++) {
     if (buffer_get(buffer, position) == '/' &&
         buffer_get(buffer, position + 1) == '*' &&
-        buffer_get(buffer, position + 2) == '*') {
+        (buffer_get(buffer, position + 2) == '*' ||
+         buffer_get(buffer, position + 2) == '!')) {
       int start_position = position;
       int end_position = start_position;
       position += 3;
@@ -331,28 +333,16 @@ void output_markdown_files(string_hashtable_t *output_files,
 
 /* ====================================================================== */
 
-value_array_t *get_command_line_command_descriptors() { return NULL; }
-
-value_array_t *get_command_line_flag_descriptors() {
-  value_array_t *result = make_value_array(2);
-  value_array_add(result, ptr_to_value(make_command_line_flag_descriptor(
-                              "output-dir", command_line_flag_type_string,
-                              "where to place the generated files")));
-  return result;
-}
-
-command_line_parser_configuation_t *get_command_line_parser_config() {
-  command_line_parser_configuation_t *config =
-      malloc_struct(command_line_parser_configuation_t);
-  config->program_name = "c-markdown-extractor";
-  config->program_description =
-      "A simple program to extract markdown in javadoc style comments\n"
-      "and create *markdown* files from it.";
-  config->command_descriptors = get_command_line_command_descriptors();
-  config->flag_descriptors = get_command_line_flag_descriptors();
-  return config;
-}
-
+/*!
+ * \function main
+ *
+ * The main routine for the simple markdown extractor for Javadoc (and
+ * eventually Doxygen) style documentation comments.
+ *
+ * This function intentionally uses the alternate Doxygen format which
+ * we hopefully can support so that users can kick the tires without
+ * migrating to the "@" syntax, etc.
+ */
 int main(int argc, char **argv) {
   configure_fatal_errors((fatal_error_config_t){
       .catch_sigsegv = true,
