@@ -7,7 +7,7 @@ build:
 	gcc -g -rdynamic -o c-markdown-extractor *.c
 
 doc: build
-	./c-markdown-extractor --output-dir=src-doc *.c
+	./c-markdown-extractor --output-dir=src-doc/ *.c
 
 format:
 	clang-format -i *.c

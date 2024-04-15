@@ -297,8 +297,9 @@ void output_markdown_file(char *output_directory, char *output_filename,
 
   // This is where we create and write an output file now that it
   // is complete.
-  buffer_write_file(output_buffer,
-                    string_append(output_directory, output_filename));
+  char* filename = string_append(output_directory, output_filename);
+  log_info("Writing %s", filename);
+  buffer_write_file(output_buffer, filename);
 }
 
 /**
