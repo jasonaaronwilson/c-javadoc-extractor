@@ -4,6 +4,7 @@
  * Extract and organize "documentation comments".
  */
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <sys/types.h>
 
@@ -117,7 +118,8 @@ buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
         }
       }
       log_fatal(
-          "The javadoc commented at position %s is not properly terminated.");
+          "The javadoc commented at position %d is not properly terminated.",
+          start_position);
       fatal_error(ERROR_UKNOWN);
     }
   }
@@ -135,7 +137,7 @@ buffer_range_t next_comment(buffer_t *buffer, buffer_range_t range) {
  */
 char *comment_to_markdown(char *comment) {
   uint64_t length = strlen(comment);
-  log_info("comment length = %d\n", length);
+  log_info("comment length = %" PRIu64 "\n", length);
   comment = string_substring(comment, 3, length - 2);
   value_array_t *lines = string_tokenize(comment, "\n");
   buffer_t *buffer = make_buffer(length);
@@ -191,8 +193,8 @@ extract_documentation_comments(string_hashtable_t *output_files,
     if (comment_range.start == comment_range.end) {
       break;
     }
-    log_info("javadoc comment found at [%d,%d)\n", comment_range.start,
-             comment_range.end);
+    log_info("javadoc comment found at [%" PRIu64 ",%" PRIu64 ")\n",
+             comment_range.start, comment_range.end);
     char *comment =
         buffer_c_substring(source_file, comment_range.start, comment_range.end);
     // Eventually we could use something smaller for the key but for
@@ -297,7 +299,7 @@ void output_markdown_file(char *output_directory, char *output_filename,
 
   // This is where we create and write an output file now that it
   // is complete.
-  char* filename = string_append(output_directory, output_filename);
+  char *filename = string_append(output_directory, output_filename);
   log_info("Writing %s", filename);
   buffer_write_file(output_buffer, filename);
 }
