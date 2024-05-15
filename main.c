@@ -2,6 +2,14 @@
  * @file main.c
  *
  * Extract and organize "documentation comments".
+ *
+ * (Currently we only handle Java's javadoc comment syntax which is
+ * similar to what DOxygen and javadoc itself use).
+ *
+ * In the abstract we remove the javadoc "wrapper" to produce a series
+ * of "markdown fragments" for each file, which are then sorted and
+ * put into files according to what source file they were defined in
+ * (or do we use the @file annotation?)
  */
 
 #include <inttypes.h>
@@ -127,7 +135,7 @@ buffer_range_t next_comment(buffer_t* buffer, buffer_range_t range) {
 }
 
 /**
- * @function comment_to_markdown
+ * @function javadoc_comment_to_markdown_fragment
  *
  * Convert a C style documentation comment to it's plain markdown
  * equivalent.
@@ -135,7 +143,7 @@ buffer_range_t next_comment(buffer_t* buffer, buffer_range_t range) {
  * (Currently we don't strip off or convert the tag which can probably
  * make all of the documentation look much better.)
  */
-char* comment_to_markdown(char* comment) {
+char* javadoc_comment_to_markdown_fragment(char* comment) {
   uint64_t length = strlen(comment);
   log_info("comment length = %" PRIu64 "\n", length);
   comment = string_substring(comment, 3, length - 2);
@@ -198,16 +206,33 @@ string_hashtable_t*
     char* comment = buffer_c_substring(source_file, comment_range.start,
                                        comment_range.end);
     // Eventually we could use something smaller for the key but for
-    // now we just sort on the entire comment itself.
-    output_file->fragments
-        = string_tree_insert(output_file->fragments, comment,
-                             str_to_value(comment_to_markdown(comment)));
+    // now we just sort on the entire comment itself. If this change
+    // is made, then we may need to change #hack-9000
+    //
+    // TODO(jawilson): we kind of want to have a summary of each
+    // fragment, namely the first line, so we can have dense links in
+    // the automatically generated README. file...
+    output_file->fragments = string_tree_insert(
+        output_file->fragments, comment,
+        str_to_value(javadoc_comment_to_markdown_fragment(comment)));
   }
 
   log_info("Done reading %s\n", filename);
 
   return output_files;
 }
+
+/*
+
+   HERE
+
+    string_tree_foreach(output_file->fragments, fragment_key, fragment_value, {
+      char* fragment_text = fragment_value.ptr;
+      output_buffer = output_markdown_file_fragment(output_buffer,
+                                                    fragment_text, tag_name);
+    });
+
+*/
 
 /**
  * @function output_readme_markdown_file
@@ -225,9 +250,11 @@ void output_readme_markdown_file(string_hashtable_t* output_files,
   output_buffer
       = buffer_append_string(output_buffer, "# Source Documentation Index\n\n");
 
-  string_ht_foreach(output_files, output_file_name, fragment_value, {
+  string_ht_foreach(output_files, output_file_name, fragment_tree_value, {
     output_buffer = buffer_printf(output_buffer, "* [%s](%s)\n",
                                   output_file_name, output_file_name);
+    // HERE
+    // {#hack-9000}
     output_buffer = buffer_append_string(output_buffer, "\n");
   });
   buffer_write_file(output_buffer,
